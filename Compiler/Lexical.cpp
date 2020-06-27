@@ -1,39 +1,20 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "Lexical.h"
-#include <string>
-#include <vector>
-#include <iostream>
-using namespace std;
 
 
-string* Keywords = new string[5]{ "while", "if", "else", "switch", "case" };
-Symbol* Key2Symbol = new Symbol[5]{ key_while, key_if, key_else, key_switch, key_case };
-
-
-bool isAlpha(char ch) {
+bool LexicalParser::isAlpha(char ch) {
 	return (ch >= 'a'&&ch <= 'z') || (ch >= 'A'&&ch <= 'Z');
 }
 
-bool isNumber(char ch) {
+bool LexicalParser::isNumber(char ch) {
 	return ch >= '0'&&ch <= '9';
 }
 
-bool isBlank(char ch) {
+bool LexicalParser::isBlank(char ch) {
 	return ch == ' ' || ch == '\n' || ch == '\r' || ch == '\t';
 }
 
-// ÅĞ¶Ï±êÊ¶·ûÊÇ·ñÊÇ¹Ø¼ü´Ê
-Symbol judgeKey(string identifier) {
-	int len = Keywords->size();
-	for (int i = 0; i < len; i++) {
-		if (Keywords[i] == identifier)
-			return Key2Symbol[i];
-	}
-	return Identifier;
-}
-
-// ¶Ô³£ÊıµÄÅĞ±ğ
-int findNumberEdge(string& text, int begin) {
+int LexicalParser::FindNumberEdge(string text, int begin) {
 	int status = 0, len = text.length();
 
 	for (int i = begin; i < len; i++) {
@@ -98,86 +79,179 @@ int findNumberEdge(string& text, int begin) {
 }
 
 
-// ´Ê·¨·ÖÎöÖ÷º¯Êı
-vector<SymbolValuePair*> LexicalParser(string text) {
-	int i = 0, len = text.length();
-	vector<SymbolValuePair*> table;
+Symbol LexicalParser::JudgeKey(string key)
+{
+	for (int i = 0; i < KeyLength; i++) {
+		if (Keywords[i] == key)
+			return Key2Symbol[i];
+	}
+	return variable;
+}
 
+int LexicalParser::ParseInt(string str)
+{
+	int value = 0;
+	for (char ch : str) {
+		value *= 10;
+		value += ch - '0';
+	}
+	return value;
+}
+
+int LexicalParser::FindVarInTable(string var)
+{
+	for (int i = 0, len = VarTable.size(); i < len; i++) {
+		if (var == VarTable[i])
+			return i;
+	}
+	return -1;
+}
+
+void LexicalParser::Error()
+{
+	cout << "è¯­æ³•é”™è¯¯ï¼ï¼" << endl;
+}
+
+void LexicalParser::ShowTables()
+{
+	cout << "è¯æ³•åˆ†æ\näºŒå…ƒå¼è¡¨ S-V Table ã€å…±" << SVTable.size() << "ä¸ªã€‘" << endl;
+	for (SVPair item : SVTable) {
+		cout << "(" << item.symbol << ",\t" << item.value << ")" << endl;
+	}
+	cout << endl << "å˜é‡è¡¨ Var Table ã€å…±" << VarTable.size() << "ä¸ªã€‘" << endl;
+	for (int i = 0, len = VarTable.size(); i < len; i++) {
+		cout << "(" << i << ",\t" << VarTable[i] << ")" << endl;
+	}
+}
+
+
+bool LexicalParser::Parse(string text)
+{
+	SVTable.clear();
+	VarTable.clear();
+
+	int i = 0, len = text.length();
 	while (i < len) {
-		// È¥µô¿Õ°×
-		while (i < len && isBlank(text[i]))
-			i++;
+		// å»æ‰ç©ºç™½
+		while (i < len && isBlank(text[i])) i++;
 
 		char ch = text[i];
 
-		// ×ÖÄ¸ -> ±êÊ¶·û
+		// å­—æ¯ -> æ ‡è¯†ç¬¦ or å˜é‡
 		if (isAlpha(ch)) {
 			int _end = i + 1;
-
 			while (_end < len && (isAlpha(text[_end]) || isNumber(text[_end])))
 				_end++;
-			string identifier = text.substr(i, _end - i);
+			string key = text.substr(i, _end - i);
 
-			table.push_back(new SymbolValuePair(judgeKey(identifier), identifier));
+			Symbol symbol = JudgeKey(key);
+			if (symbol != Symbol::variable) {
+				SVTable.push_back(SVPair(symbol, 0));
+			}
+			else {	// æ ‡è¯†ç¬¦æ˜¯å˜é‡ï¼Œå…ˆæŸ¥å˜é‡è¡¨
+				int index = FindVarInTable(key);
+				if (index != -1) {	// è¡¨ä¸­å·²æœ‰è¯¥å˜é‡
+					SVTable.push_back(SVPair(symbol, index));
+				}
+				else {	// è¡¨ä¸­æ²¡æœ‰åˆ™æ–°å»º
+					VarTable.push_back(key);
+					SVTable.push_back(SVPair(symbol, VarTable.size() - 1));
+				}
+			}
+
 			i = _end;
 			continue;
 		}
 
-		// Êı×Ö or +- -> ³£Êı or ²Ù×÷·û+-
+		// æ•°å­— -> åªè€ƒè™‘æ•´æ•°		// è€ƒè™‘ +-
 		else if (isNumber(ch) || ch == '+' || ch == '-') {
-			// ÅĞ¶ÏÊÇ²Ù×÷·û+-
+			// åˆ¤æ–­æ˜¯æ“ä½œç¬¦+-
 			if (ch == '+' && !isNumber(text[i + 1])) {
-				table.push_back(new SymbolValuePair(Op_plus, "+"));
+				SVTable.push_back(SVPair(Symbol::plus, 0));
 				i++;
 				continue;
 			}
 			else if (ch == '-' && !isNumber(text[i + 1])) {
-				table.push_back(new SymbolValuePair(Op_minus, "-"));
+				SVTable.push_back(SVPair(Symbol::minus, 0));
 				i++;
 				continue;
 			}
 
-			// È·¶¨ÊÇ³£Êı£¬³£ÊıµÄÅĞ¶Ï·Åµ½º¯Êı findNumberEdge ÖĞ
+			// ç¡®å®šæ˜¯å¸¸æ•°ï¼Œå¸¸æ•°çš„åˆ¤æ–­æ”¾åˆ°å‡½æ•° findNumberEdge ä¸­
 			int begin = (ch == '+' || ch == '-') ? i + 1 : i;
-			int _end = findNumberEdge(text, begin);
+			int _end = FindNumberEdge(text, i);
+			int value = ParseInt(text.substr(i, _end - i));
 
-			table.push_back(new SymbolValuePair(Number, text.substr(i, _end - i)));
+			SVTable.push_back(SVPair(const_int, value));
 			i = _end;
 			continue;
 		}
 
-		// ÆäËû²Ù×÷·û
+		// å…¶ä»–æ“ä½œç¬¦
 		switch (ch)
 		{
+		case ';':
+			SVTable.push_back(SVPair(semicolon, 0));
+			i++;
+			break;
+		case '#':
+			SVTable.push_back(SVPair(sharp, 0));
+			i++;
+			break;
 		case '*':
-			table.push_back(new SymbolValuePair(Op_multi, "*"));
+			SVTable.push_back(SVPair(times, 0));
+			i++;
+			break;
+		case '(':
+			SVTable.push_back(SVPair(lparent, 0));
+			i++;
+			break;
+		case ')':
+			SVTable.push_back(SVPair(rparent, 0));
 			i++;
 			break;
 
-		case '<':
+			// := èµ‹å€¼ç¬¦å·
+		case ':':
 			if (text[i + 1] == '=') {
-				table.push_back(new SymbolValuePair(Op_lessEqual, "<="));
+				SVTable.push_back(SVPair(assign, 0));
 				i += 2;
 			}
 			else {
-				table.push_back(new SymbolValuePair(Op_less, "<"));
+				Error();
+				return false;
+			}
+			break;
+
+			// rop
+		case '<':	// <= < <>
+			if (text[i + 1] == '=') {
+				SVTable.push_back(SVPair(rop, 1));
+				i += 2;
+			}
+			else if (text[i + 1] == '>') {
+				SVTable.push_back(SVPair(rop, 2));
+				i += 2;
+			}
+			else {
+				SVTable.push_back(SVPair(rop, 0));
+				i++;
+			}
+			break;
+
+		case '>':	// >= >
+			if (text[i + 1] == '=') {
+				SVTable.push_back(SVPair(rop, 4));
+				i += 2;
+			}
+			else {
+				SVTable.push_back(SVPair(rop, 3));
 				i++;
 			}
 			break;
 
 		case '=':
-			if (text[i + 1] == '=') {
-				table.push_back(new SymbolValuePair(Op_equal, "=="));
-				i += 2;
-			}
-			else {
-				table.push_back(new SymbolValuePair(Op_assign, "="));
-				i++;
-			}
-			break;
-
-		case ';':
-			table.push_back(new SymbolValuePair(Op_semicolon, ";"));
+			SVTable.push_back(SVPair(rop, 5));
 			i++;
 			break;
 
@@ -187,17 +261,23 @@ vector<SymbolValuePair*> LexicalParser(string text) {
 		}
 	}
 
-	return table;
+	return true;
 }
 
 
+
+// è¯æ³•åˆ†æ çš„ æµ‹è¯•ä¸»ç¨‹åº
 void main_lexical_test() {
-	string program = "while case  value =23;\n test=+322.22 ; hello = -3.45E+12;";
-	vector<SymbolValuePair*> table;
+	string program = "\
+		while (a > b) do\
+			begin\
+				if m >= n then a := a + 1\
+				else\
+					while k = h do x:= x + 2;\
+				m:= n + x * (m + y)\
+			end#";
 
-	table = LexicalParser(program);
-
-	for (SymbolValuePair* item : table) {
-		cout << "<" << item->symbol << ",\t" << item->value << ">" << endl;
-	}
+	LexicalParser parser;
+	parser.Parse(program);
+	parser.ShowTables();
 }

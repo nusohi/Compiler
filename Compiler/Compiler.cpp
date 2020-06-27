@@ -7,7 +7,7 @@ using namespace std;
 
 int main()
 {
-	//main_lexical_test();
-	main_syntax_test();
+	main_lexical_test();
+	//main_syntax_test();
 }
 

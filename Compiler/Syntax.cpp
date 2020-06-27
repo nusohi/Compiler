@@ -1,10 +1,10 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "Syntax.h"
 
 
 SyntaxParser::SyntaxParser()
 {
-	// ³õÊ¼»¯£¬½¨Á¢TS¡¢NS Óë¶ÔÓ¦ÏÂ±êµÄ map
+	// åˆå§‹åŒ–ï¼Œå»ºç«‹TSã€NS ä¸å¯¹åº”ä¸‹æ ‡çš„ map
 	for (int i = 0; i < TS.size(); i++)
 		TS2Index[TS[i]] = i;
 	for (int i = 0; i < NS.size(); i++)
@@ -21,15 +21,15 @@ bool SyntaxParser::Parse(string text)
 
 	for (Index = 0; Index < Input.size(); Index++) {
 		while (Input[Index] != Stack.top()) {
-			// Õ»¶¥±ØĞëÊÇ NS ÇÒ PopAndPush ÎŞ´íÎó£¨²úÉúÊ½²»Îª¿Õ£©
+			// æ ˆé¡¶å¿…é¡»æ˜¯ NS ä¸” PopAndPush æ— é”™è¯¯ï¼ˆäº§ç”Ÿå¼ä¸ä¸ºç©ºï¼‰
 			if (!(TopIsNS() && PopAndPush())) {
 				Error();
 				return false;
 			}
 		}
 
-		// ÖÁ´Ë£¬Õ»¶¥·ûºÅÓëÊäÈë·ûºÅÆ¥Åä
-		Log("\t\tÆ¥Åä");
+		// è‡³æ­¤ï¼Œæ ˆé¡¶ç¬¦å·ä¸è¾“å…¥ç¬¦å·åŒ¹é…
+		Log("\t\tåŒ¹é…");
 		Stack.pop();
 	}
 
@@ -62,12 +62,12 @@ bool SyntaxParser::TopIsNS()
 
 bool SyntaxParser::PopAndPush()
 {
-	// ²é±íµÃ²úÉúÊ½ formula
+	// æŸ¥è¡¨å¾—äº§ç”Ÿå¼ formula
 	int i = NS2Index[Stack.top()],
 		j = TS2Index[Input[Index]];
 	string formula = Table[i][j];
 
-	// ²úÉúÊ½Îª¿ÕÊ± ÅĞ¶ÏÓï·¨³ö´í
+	// äº§ç”Ÿå¼ä¸ºç©ºæ—¶ åˆ¤æ–­è¯­æ³•å‡ºé”™
 	if (formula == "") return false;
 
 	string fullFormula = "";
@@ -75,8 +75,8 @@ bool SyntaxParser::PopAndPush()
 	fullFormula += "->" + formula;
 
 	Stack.pop();
-	// ²úÉúÊ½Îª A->¦Å Ê±½ö pop£¬·ñÔòÄæĞòÈëÕ»
-	if (formula != "¦Å") {
+	// äº§ç”Ÿå¼ä¸º A->Îµ æ—¶ä»… popï¼Œå¦åˆ™é€†åºå…¥æ ˆ
+	if (formula != "Îµ") {
 		for (int i = formula.size() - 1; i >= 0; i--)
 			Stack.push(formula[i]);
 	}
@@ -88,7 +88,7 @@ bool SyntaxParser::PopAndPush()
 
 void SyntaxParser::Log(string formula)
 {
-	// ´òÓ¡·ûºÅÕ»
+	// æ‰“å°ç¬¦å·æ ˆ
 	static stack<char> tmpStack;
 	stringstream stackString;
 
@@ -106,25 +106,25 @@ void SyntaxParser::Log(string formula)
 	stackString << "]";
 	cout  << setw(28) << left << stackString.str();
 
-	// ´òÓ¡ µ±Ç°×Ö·û& ÊäÈë´® & ²úÉúÊ½
+	// æ‰“å° å½“å‰å­—ç¬¦& è¾“å…¥ä¸² & äº§ç”Ÿå¼
 	cout << setw(10) << Input[Index] << setw(15) << Input.substr(Index) << '\t' << formula << endl;
 }
 
 void SyntaxParser::LogTitle()
 {
-	cout << endl << setw(28) << left << "·ûºÅÕ»"
-		<<setw(10)<< "µ±Ç°×Ö·û" << setw(15) << "ÊäÈë´®"
-		<< '\t' << "ËùÓÃ²úÉúÊ½" << endl;
+	cout << endl << setw(28) << left << "ç¬¦å·æ ˆ"
+		<<setw(10)<< "å½“å‰å­—ç¬¦" << setw(15) << "è¾“å…¥ä¸²"
+		<< '\t' << "æ‰€ç”¨äº§ç”Ÿå¼" << endl;
 }
 
 void SyntaxParser::Error()
 {
-	cout << "Óï·¨´íÎó£¡£¡" << endl;
+	cout << "è¯­æ³•é”™è¯¯ï¼ï¼" << endl;
 }
 
 void SyntaxParser::Success()
 {
-	cout << "Óï·¨ÕıÈ·£¡£¡" << endl;
+	cout << "è¯­æ³•æ­£ç¡®ï¼ï¼" << endl;
 }
 
 

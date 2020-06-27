@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include <vector>
 #include <stack>
 #include <string>
@@ -15,25 +15,25 @@ public:
 	vector<char> NS{ 'E','A','T','B','F' };		// Nontermial Symbol	// A==E' B==T'
 	vector<vector<string>> Table{
 		{"TA",	"",		"",		"TA",	"",		""},
-		{"",	"+TA",	"",		"",		"¦Å",	"¦Å"},
+		{"",	"+TA",	"",		"",		"Îµ",	"Îµ"},
 		{"FB",	"",		"",		"FB",	"",		""},
-		{"",	"¦Å",	"*FB",	"",		"¦Å",	"¦Å"},
+		{"",	"Îµ",	"*FB",	"",		"Îµ",	"Îµ"},
 		{"i",	"",		"",		"(E)",	"",		""}
 	};
 
 private:
-	stack<char> Stack;	// ·ûºÅÕ»
+	stack<char> Stack;	// ç¬¦å·æ ˆ
 	map<char, int> TS2Index, NS2Index;
-	string Input;		// ÊäÈëµÄ×Ö·û´®
-	int Index;			// µ±Ç°´¦ÀíµÄ×Ö·ûÏÂ±ê
+	string Input;		// è¾“å…¥çš„å­—ç¬¦ä¸²
+	int Index;			// å½“å‰å¤„ç†çš„å­—ç¬¦ä¸‹æ ‡
 
 public:
 	SyntaxParser();
 	bool Parse(string text);
 private:
-	void Reset();				// ÖØÖÃÕ» & Index
-	bool TopIsNS();				// ÅĞ¶ÏÕ»¶¥ÔªËØÊÇ·ñÎª·ÇÖÕ½á·û
-	bool PopAndPush();			// µ¯³öÕ»¶¥²¢ÄæĞòÌí¼Ó²úÉúÊ½
+	void Reset();				// é‡ç½®æ ˆ & Index
+	bool TopIsNS();				// åˆ¤æ–­æ ˆé¡¶å…ƒç´ æ˜¯å¦ä¸ºéç»ˆç»“ç¬¦
+	bool PopAndPush();			// å¼¹å‡ºæ ˆé¡¶å¹¶é€†åºæ·»åŠ äº§ç”Ÿå¼
 
 	void Log(string formula = "");
 	void LogTitle();
