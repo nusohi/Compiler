@@ -2,6 +2,8 @@
 #include "Lexical.h"
 
 
+
+
 bool LexicalParser::isAlpha(char ch) {
 	return (ch >= 'a'&&ch <= 'z') || (ch >= 'A'&&ch <= 'Z');
 }
@@ -88,15 +90,6 @@ Symbol LexicalParser::JudgeKey(string key)
 	return variable;
 }
 
-int LexicalParser::ParseInt(string str)
-{
-	int value = 0;
-	for (char ch : str) {
-		value *= 10;
-		value += ch - '0';
-	}
-	return value;
-}
 
 int LexicalParser::FindVarInTable(string var)
 {
@@ -163,22 +156,9 @@ bool LexicalParser::Parse(string text)
 			continue;
 		}
 
-		// 数字 -> 只考虑整数		// 考虑 +-
-		else if (isNumber(ch) || ch == '+' || ch == '-') {
-			// 判断是操作符+-
-			if (ch == '+' && !isNumber(text[i + 1])) {
-				SVTable.push_back(SVPair(Symbol::plus, 0));
-				i++;
-				continue;
-			}
-			else if (ch == '-' && !isNumber(text[i + 1])) {
-				SVTable.push_back(SVPair(Symbol::minus, 0));
-				i++;
-				continue;
-			}
-
+		// 数字 -> 只考虑整数	
+		else if (isNumber(ch)) {
 			// 确定是常数，常数的判断放到函数 findNumberEdge 中
-			int begin = (ch == '+' || ch == '-') ? i + 1 : i;
 			int _end = FindNumberEdge(text, i);
 			int value = ParseInt(text.substr(i, _end - i));
 
@@ -190,6 +170,10 @@ bool LexicalParser::Parse(string text)
 		// 其他操作符
 		switch (ch)
 		{
+		case '+':
+			SVTable.push_back(SVPair(Symbol::plus, 0));
+			i++;
+			break;
 		case ';':
 			SVTable.push_back(SVPair(semicolon, 0));
 			i++;
@@ -265,6 +249,16 @@ bool LexicalParser::Parse(string text)
 }
 
 
+
+string SymbolToString(Symbol sym)
+{
+	vector<string> Sym2Str{
+		"if","then","else","while","begin" ,"do","end","A",";","B","E",
+		"#","S","L","Final","TempVar","B∧","B∨","+","-","*",":=","not",
+		"∧","∨","rop","(",")","i","ci"
+	};
+	return Sym2Str[sym];
+}
 
 // 词法分析 的 测试主程序
 void main_lexical_test() {
