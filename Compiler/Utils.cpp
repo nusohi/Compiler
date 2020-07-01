@@ -16,10 +16,14 @@ vector<string> Split(char* str, char ch) {
 
 int ParseInt(string str)
 {
-	int value = 0;
+	int op = 1, value = 0;
+	if (str[0] == '-' || str[0] == '+') {
+		op = (str[0] == '-' ? -1 : 1);
+		str = str.substr(1);
+	}
 	for (char ch : str) {
 		value *= 10;
 		value += ch - '0';
 	}
-	return value;
+	return op * value;
 }

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <string>
 #include <vector>
+#include <map>
 #include <iostream>
 #include "Utils.h"
 using namespace std;
@@ -22,7 +23,6 @@ enum Symbol {
 	S,			// 语句
 	L,			// 复合语句
 	FINAL,		
-	temp_var,	// 临时变量
 	BA,			// 布尔表达式中的 B∧
 	BO,			// 布尔表达式中的 B∨
 	plus,		// +
@@ -37,9 +37,18 @@ enum Symbol {
 	rparent,	// )
 	variable,
 	const_int,	// 整常量
+
+	if_else,
+	ifB,
+	WB,
+	W,
+	LS
 };
 
+
 string SymbolToString(Symbol sym);
+Symbol StringToSymbol(string str);
+string RopToString(int index);
 
 // Symbol Value Pair
 struct SVPair {

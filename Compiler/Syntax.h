@@ -66,13 +66,13 @@ struct TableItem_SLR {
 struct Node {
 	Symbol symbol;	// 符号类型
 	string name;	// 变量名
-	int place;		// 在变量表 VarTable 中的位置
+	int place;		// 在变量表 VarTable 中的位置		常量时为-1
 	int val;		// 常量的值	(name为空时判定为常量)
 	int tc, fc;		// true chain & false chain
 	int chain, quad;
 
 	// 变量时返回变量名 常量时返回常量值
-	string nameOrVal() { return name == "" ? to_string(val) : name; }
+	string nameOrVal() { return place == -1 ? to_string(val) : name; }
 };
 
 
@@ -85,24 +85,37 @@ struct Four {
 
 class SyntaxParser_SLR {
 public:
+	// 初始化
 	SyntaxParser_SLR();
-	void ExpListInit();
-	void InitTableHead();	// 初始化表头 TableHead
+	void InitExpList();
 	void InitTable();		// 初始化 Table
 	void InitStacks();		// 初始化 stacks
 
+	// 分析主程序
 	void Parse(vector<SVPair>& words, vector<string> varTable);
 
+private:
+	// 移进 规约 GOTO
 	void Shift(SVPair word, int nextState);
 	void Reduce(int expIndex);
 	void GoTo(Node* node);
 
+	// 临时变量 Emit 四元式ID
 	int tempVarCount = 0;
 	int NewTemp();
 	void Emit(string op, string A, string B, string res);
+	int NextFourID() { return FourList.size(); }
 
+	// Backpatch Merge
+	void Backpatch(int head, int newAddr);
+	int Merge(int headA, int headB);
+public:
+	// Log
 	void LogFourList();
 	void LogStackInfo();
+	void LogExpList();
+
+	string StateToStr(int state);// 0-出错 1-移进 2-规约 3-acc 4-GOTO
 
 private:
 	// 语义子程序
@@ -121,6 +134,7 @@ private:
 
 private:
 	string SLRTablePath = "D://code//NELO//SLR//SLR_table.txt";		/// 暂
+	string GrammarPath  = "D://code//NELO//SLR//exp.txt";			/// 暂
 };
 
 

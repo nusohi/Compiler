@@ -109,12 +109,14 @@ void LexicalParser::ShowTables()
 {
 	cout << "词法分析\n二元式表 S-V Table 【共" << SVTable.size() << "个】" << endl;
 	for (SVPair item : SVTable) {
-		cout << "(" << item.symbol << ",\t" << item.value << ")" << endl;
+		cout << "(" << item.symbol << ",\t" << item.value << ")"
+			<< "\t" << SymbolToString(item.symbol) << endl;
 	}
 	cout << endl << "变量表 Var Table 【共" << VarTable.size() << "个】" << endl;
 	for (int i = 0, len = VarTable.size(); i < len; i++) {
 		cout << "(" << i << ",\t" << VarTable[i] << ")" << endl;
 	}
+	cout << endl;
 }
 
 
@@ -252,12 +254,60 @@ bool LexicalParser::Parse(string text)
 
 string SymbolToString(Symbol sym)
 {
-	vector<string> Sym2Str{
+	static vector<string> Sym2Str{
 		"if","then","else","while","begin" ,"do","end","A",";","B","E",
-		"#","S","L","Final","TempVar","B∧","B∨","+","-","*",":=","not",
-		"∧","∨","rop","(",")","i","ci"
+		"#","S","L","Final","B∧","B∨","+","-","*",":=","not",
+		"∧","∨","rop","(",")","i","ci","if_else","ifB","WB","W","LS"
 	};
 	return Sym2Str[sym];
+}
+	
+Symbol StringToSymbol(string str)
+{
+	static map<std::string, Symbol> Str2Symbol{
+		{"if" , sy_if},
+		{"then" , sy_then},
+		{"else" , sy_else},
+		{"while" , sy_while},
+		{"begin" , sy_begin},
+		{"do" , sy_do},
+		{"end" , sy_end},
+		{"A" , A},
+		{";" , semicolon},
+		{"B" , B},
+		{"E" , E},
+		{"#" , sharp},
+		{"S" , S},
+		{"L" , L},
+		{"FINAL" , FINAL},
+		{"BA" , BA},
+		{"BO" , BO},
+		{"+" , Symbol::plus},
+		{"-" , Symbol::minus},
+		{"*" , times},
+		{":=" , assign},
+		{"not" , op_not},
+		{"and" , op_and},
+		{"or" , op_or},
+		{"rop" , rop},
+		{"(" , lparent},
+		{")" , rparent},
+		{"i" , variable},
+		{"ci" , const_int},
+
+		{"if_else" , if_else},
+		{"ifB" , ifB},
+		{"WB" , WB},
+		{"W" , W},
+		{"LS" , LS}
+	};
+	return Str2Symbol[str];
+}
+
+string RopToString(int index)
+{
+	static string rops[6]{ "<","<=","<>",">",">=","=" };
+	return rops[index];
 }
 
 // 词法分析 的 测试主程序

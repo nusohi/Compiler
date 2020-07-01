@@ -134,13 +134,22 @@ void main_syntax_test() {
 	//parser.Parse("i*(i+i)#");
 	//parser.Parse("i*(i+i#");
 
-	string program = " A +12 * C#";
+	string program = " \
+			while (A<B) do\
+				begin\
+					if m>=n then a:=a+1\
+					else\
+						while k=h do x:=x+2;\
+					m:=n+x*(m+y)\
+				end#~\
+		";
 
 	LexicalParser lexParser;
 	lexParser.Parse(program);
 	lexParser.ShowTables();
 
 	SyntaxParser_SLR parser;
+	parser.LogExpList();
 	parser.Parse(lexParser.SVTable, lexParser.VarTable);
 	parser.LogFourList();
 }
@@ -148,28 +157,43 @@ void main_syntax_test() {
 
 SyntaxParser_SLR::SyntaxParser_SLR()
 {
-	ExpListInit();
-	InitTableHead();
+	InitExpList();
 	InitTable();
 }
 
-void SyntaxParser_SLR::ExpListInit()
+void SyntaxParser_SLR::InitExpList()
 {
-	ExpList.push_back(new Expression({ S, { E } }));
-	ExpList.push_back(new Expression({ E, { E, Symbol::plus, E } }));
-	ExpList.push_back(new Expression({ E, { E, Symbol::times, E } }));
-	ExpList.push_back(new Expression({ E, { lparent, E, rparent } }));
-	ExpList.push_back(new Expression({ E, { variable } }));		// variable | const_int
-	ExpList.push_back(new Expression({ E, { const_int } }));
-}
+	//ExpList.push_back(new Expression({ S, { E } }));
+	//ExpList.push_back(new Expression({ E, { E, Symbol::plus, E } }));
+	//ExpList.push_back(new Expression({ E, { E, Symbol::times, E } }));
+	//ExpList.push_back(new Expression({ E, { lparent, E, rparent } }));
+	//ExpList.push_back(new Expression({ E, { variable } }));		// variable | const_int
+	//ExpList.push_back(new Expression({ E, { const_int } }));
 
-void SyntaxParser_SLR::InitTableHead()
-{
-	vector<Symbol> heads{ 
-		const_int, variable, Symbol::plus, times, lparent, rparent, sharp, E 
+
+	// 从文件中读取文法
+	ifstream file(GrammarPath);
+
+	if (!file.is_open()) {
+		cout << "文件读取错误：" << GrammarPath << endl;
+		return;
+	}
+
+	char line[200];
+
+	// 读取内容
+	while (file.getline(line, 200)) {
+		vector<string> s = Split(line, ' ');
+		if (s.size() == 1 && s[0] == "EOF")	break;
+		if (s.size() <= 1)	continue;
+
+		Expression* exp = new Expression();
+		exp->head = StringToSymbol(s[0]);
+		for (int i = 1, len = s.size(); i < len; i++)
+			exp->tail.push_back(StringToSymbol(s[i]));
+		ExpList.push_back(exp);
 	};
-	for (int i = 0, len = heads.size(); i < len; i++)
-		TableHead[heads[i]] = i;
+	file.close();
 }
 
 void SyntaxParser_SLR::InitTable()
@@ -179,15 +203,22 @@ void SyntaxParser_SLR::InitTable()
 	vector<vector<string>> table;
 
 	if (!file.is_open()) {
-		cout << "文件读取错误" << endl;
+		cout << "文件读取错误：" << SLRTablePath << endl;
 		return;
 	}
 
 	char line[200];
-	file.getline(line, 200);	// 去掉表头
 
+	// 读取表头
+	file.getline(line, 200);
+	vector<string> s = Split(line, '\t');
+	for (int i = 1, len = s.size(); i < len; i++) {
+		TableHead[StringToSymbol(s[i])] = i - 1;
+	}
+
+	// 读取内容
 	while (file.getline(line, 200)) {
-		vector<string> s = Split(line, '\t');
+		s = Split(line, '\t');
 		s.erase(s.begin());
 		table.push_back(s);
 	};
@@ -243,7 +274,7 @@ void SyntaxParser_SLR::Parse(vector<SVPair>& words, vector<string> varTable)
 	for (int i = 0, len = words.size(); i < len;) {
 		TableItem_SLR tbItem = Table[StateStack.top()][TableHead[words[i].symbol]];	// 查表
 		LogStackInfo();
-		cout << '(' << tbItem.state << ',' << tbItem.value << ')' << endl;
+		cout << StateToStr(tbItem.state) << " " << tbItem.value << endl;
 
 		if (tbItem.state == 1) {
 			Shift(words[i++], tbItem.value);	// i++
@@ -252,15 +283,16 @@ void SyntaxParser_SLR::Parse(vector<SVPair>& words, vector<string> varTable)
 			Reduce(tbItem.value);				// i 不动
 		}
 		else if (tbItem.state == 3) {
-			cout << "ACC" << endl;
+			Reduce(0);							// 执行语义子程序 case 0
+			cout << "=====> ACC" << endl;
 			return;
 		}
 		else if (tbItem.state == 4) {
-			cout << "错误（GOTO）" << endl;
+			cout << "=====> 错误（GOTO）" << endl;
 			return;
 		}
 		else {
-			cout << "出错" << endl;
+			cout << "=====> 出错" << endl;
 			return;
 		}
 	}
@@ -281,7 +313,10 @@ void SyntaxParser_SLR::Shift(SVPair word, int nextState)
 		break;
 	case const_int:
 		node->val = word.value;
+		node->place = -1;
 		break;
+	case rop:
+		node->val = word.value;
 	default:
 		break;
 	}
@@ -327,18 +362,44 @@ void SyntaxParser_SLR::Emit(string op, string A, string B, string res)
 	FourList.push_back({ op, A, B, res });
 }
 
+void SyntaxParser_SLR::Backpatch(int head, int newAddr)
+{
+	int p = head;
+	while (p != -1) {
+		int next = ParseInt(FourList[p].res);
+		FourList[p].res = to_string(newAddr);
+		p = next;
+	}
+}
+
+int SyntaxParser_SLR::Merge(int headA, int headB)
+{
+	if (headB == -1) 
+		return headA;
+
+	int p = headB, res;
+	while ((res = ParseInt(FourList[p].res)) != -1)
+		p = res;
+	FourList[p].res = to_string(headA);
+	return headB;
+}
+
 void SyntaxParser_SLR::LogFourList()
 {
-	cout << "========================================" << endl;
-	for (Four f : FourList) {
-		cout << f.str() << endl;
+	cout << "=== 四元式 ==============================" << endl;
+	for (int i = 0, len = FourList.size(); i < len; i++) {
+		cout << left << setw(4) << i << "("
+			<< left << setw(10) << FourList[i].op + ","
+			<< left << setw(10) << FourList[i].argA + ","
+			<< left << setw(10) << FourList[i].argB + ","
+			<< FourList[i].res << ")" << endl;
 	}
 	cout << "========================================" << endl;
 }
 
 void SyntaxParser_SLR::LogStackInfo() {
 	static int count = 0;
-	cout << ++count << '\t';
+	cout << left << setw(3) << ++count << "|";
 	stringstream str;
 
 	stack<int> _states;
@@ -352,7 +413,7 @@ void SyntaxParser_SLR::LogStackInfo() {
 		_states.pop();
 		str << temp << ' ';
 	}
-	cout << left << setw(20) << str.str();
+	cout << left << setw(45) << str.str();
 
 	str.str("");	// clear
 	stack<Node*> _nodes;
@@ -366,43 +427,165 @@ void SyntaxParser_SLR::LogStackInfo() {
 		_nodes.pop();
 		str << SymbolToString(temp->symbol) << ' ';
 	}
-	cout << left << setw(20) << str.str();
+	cout << left << setw(60) << str.str();
+}
+
+void SyntaxParser_SLR::LogExpList()
+{
+	cout << "== ExpList ==============================" << endl;
+	for (int i = 0, len = ExpList.size(); i < len; i++) {
+		cout << " " << i << "\t" << SymbolToString(ExpList[i]->head) << " -> ";
+		for (Symbol s : ExpList[i]->tail)
+			cout << SymbolToString(s) << " ";
+		cout << endl;
+	}
+	cout << "=========================================" << endl;
+}
+
+string SyntaxParser_SLR::StateToStr(int state)
+{
+	static string state2Str[5]{ "出错","shift","reduce","ACC","goto" };
+	return state2Str[state];
 }
 
 void SyntaxParser_SLR::SematicSubroutine(int expIndex, vector<Node*>& nodes)
 {
 	switch (expIndex)
 	{
-	case 0:
-
+	case 0:			// FINAL -> S
+		Backpatch(nodes[1]->chain, NextFourID());
 		break;
 
-	case 1:
+	case 1:			// S->if_else S
+		nodes[0]->chain = Merge(nodes[1]->chain, nodes[2]->chain);
+		break;
+
+	case 2:			// if_else->ifB then S else
+		Emit("j", "_", "_", "-1");
+		Backpatch(nodes[1]->chain, NextFourID());
+		nodes[0]->chain = Merge(nodes[3]->chain, NextFourID() - 1);
+		break;
+
+	case 3:			// ifB->if B
+		Backpatch(nodes[2]->tc, NextFourID());
+		nodes[0]->chain = nodes[2]->fc;
+		break;
+
+	case 4:			// S->WB do S
+		Backpatch(nodes[3]->chain, nodes[1]->quad);
+		Emit("j", "_", "_", to_string(nodes[1]->quad));
+		nodes[0]->chain = nodes[1]->chain;
+		break;
+
+	case 5:			// WB->W B
+		Backpatch(nodes[2]->tc, NextFourID());
+		nodes[0]->chain = nodes[2]->fc;
+		nodes[0]->quad = nodes[1]->quad;
+		break;
+
+	case 6:			// W->while
+		nodes[0]->quad = NextFourID();
+		break;
+
+	case 7:			// S->begin L end
+		nodes[0]->chain = nodes[2]->chain;
+		break;
+
+	case 8:			// S->A
+		nodes[0]->chain = -1;
+		break;
+
+	case 9:			// L->LS L
+		nodes[0]->chain = nodes[2]->chain;
+		break;
+
+	case 10:		// LS->L ;
+		Backpatch(nodes[1]->chain, NextFourID());
+		break;
+
+	case 11:		// L->S
+		nodes[0]->chain = nodes[1]->chain;
+		break;
+
+	case 12:		// A->i := E
+		Emit(":=", nodes[3]->nameOrVal(), "_", nodes[1]->nameOrVal());
+		break;
+
+	// B 布尔表达式 =============================================================
+	case 13:		// B->BA B
+		nodes[0]->tc - nodes[2]->tc;
+		nodes[0]->fc = Merge(nodes[1]->fc, nodes[2]->fc);
+		break;
+
+	case 14:		// B->BO B
+		nodes[0]->fc = nodes[2]->fc;
+		nodes[0]->tc = Merge(nodes[1]->tc, nodes[2]->tc);
+		break;
+
+	case 15:		// B->not B
+		nodes[0]->tc = nodes[2]->fc;
+		nodes[0]->fc = nodes[2]->tc;
+		break;
+
+	case 16:		// B->(B)
+		nodes[0]->tc = nodes[2]->tc;
+		nodes[0]->fc = nodes[2]->fc;
+		break;
+
+	case 17:		// B->i rop i
+		nodes[0]->tc = NextFourID();
+		nodes[0]->fc = NextFourID() + 1;
+		Emit("j" + RopToString(nodes[2]->val), nodes[1]->nameOrVal(), nodes[3]->nameOrVal(), "-1");
+		Emit("j", "_", "_", "-1");
+		break;
+
+	case 18:		// B->i
+		nodes[0]->tc = NextFourID();
+		nodes[0]->fc = NextFourID() + 1;
+		Emit("jnz", nodes[1]->nameOrVal(), "_", "-1");
+		Emit("j", "_", "_", "-1");
+		break;
+
+	case 19:		// BA->B and
+		Backpatch(nodes[1]->tc, NextFourID());
+		nodes[0]->fc = nodes[1]->fc;
+		break;
+
+	case 20:		// BO->B or
+		Backpatch(nodes[1]->fc, NextFourID());
+		nodes[0]->tc = nodes[1]->tc;
+		break;
+
+	// E 算术表达式 =============================================================
+	case 21:		// E->E+E
 		nodes[0]->place = NewTemp();
 		nodes[0]->name = VarTable[nodes[0]->place];
 		Emit("+", nodes[1]->nameOrVal(), nodes[3]->nameOrVal(), nodes[0]->name);
 		break;
 
-	case 2:
+	case 22:		// E->E*E
 		nodes[0]->place = NewTemp();
 		nodes[0]->name = VarTable[nodes[0]->place];
 		Emit("*", nodes[1]->nameOrVal(), nodes[3]->nameOrVal(), nodes[0]->name);
 		break;
 
-	case 3:
-		nodes[0]->place = nodes[1]->place;
-		break;
-
-	case 4:
+	case 23:		// E->(E)
 		nodes[0]->place = nodes[1]->place;
 		nodes[0]->name = nodes[1]->name;
 		break;
 
-	case 5:
+	case 24:		// E->i		即 E->variable
+		nodes[0]->place = nodes[1]->place;
+		nodes[0]->name = nodes[1]->name;
+		break;
+
+	case 25:		// E->ci	即 E->const_int
 		nodes[0]->val = nodes[1]->val;
+		nodes[0]->place = -1;
 		break;
 
 	default:
+		cout << "规约错误" << endl;
 		break;
 	}
 }
