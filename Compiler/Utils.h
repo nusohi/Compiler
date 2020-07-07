@@ -6,6 +6,6 @@
 using namespace std;
 
 
-vector<string> Split(char* str, char ch);
+vector<string> Split(char* str, char ch, bool noSpace = true);
 
 int ParseInt(string str);

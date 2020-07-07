@@ -163,14 +163,6 @@ SyntaxParser_SLR::SyntaxParser_SLR()
 
 void SyntaxParser_SLR::InitExpList()
 {
-	//ExpList.push_back(new Expression({ S, { E } }));
-	//ExpList.push_back(new Expression({ E, { E, Symbol::plus, E } }));
-	//ExpList.push_back(new Expression({ E, { E, Symbol::times, E } }));
-	//ExpList.push_back(new Expression({ E, { lparent, E, rparent } }));
-	//ExpList.push_back(new Expression({ E, { variable } }));		// variable | const_int
-	//ExpList.push_back(new Expression({ E, { const_int } }));
-
-
 	// 从文件中读取文法
 	ifstream file(GrammarPath);
 

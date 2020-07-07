@@ -67,7 +67,7 @@ struct Node {
 	Symbol symbol;	// 符号类型
 	string name;	// 变量名
 	int place;		// 在变量表 VarTable 中的位置		常量时为-1
-	int val;		// 常量的值	(name为空时判定为常量)
+	int val;		// 常量的值
 	int tc, fc;		// true chain & false chain
 	int chain, quad;
 

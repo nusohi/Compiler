@@ -2,13 +2,22 @@
 #include "Utils.h"
 
 
-vector<string> Split(char* str, char ch) {
+vector<string> Split(char* str, char ch, bool noSpace) {
 	vector<string> res;
 	istringstream is(str);
 
 	string t;
 	while (getline(is, t, ch)) {
 		res.push_back(t);
+	}
+
+	if (noSpace) {
+		for (int i = 0; i < res.size();) {
+			if (res[i] == "") 
+				res.erase(res.begin() + i);
+			else 
+				i++;
+		}
 	}
 	return res;
 }
